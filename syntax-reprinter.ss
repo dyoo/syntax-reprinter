@@ -41,26 +41,26 @@
          (print (syntax-object->datum stx) outp)
          stx]))
     
-    ;; reprint-sequence-internals: syntax syntax-pair/empty/syntax-object syntax -> syntax
+    ;; reprint-sequence-internals: syntax (union syntax-pair empty syntax-object) -> syntax
     ;; Handles the printing of the internal elements.
     (define (reprint-sequence-internals container-stx stx-pair)
-      (let loop ([e-rest stx-pair]
+      (let loop ([stx-pair stx-pair]
                  [previous-stx container-stx]
                  [space-in-front #f])
         (cond
-          [(empty? e-rest) previous-stx]
+          [(empty? stx-pair) previous-stx]
           
-          [(pair? e-rest)
+          [(pair? stx-pair)
            (when space-in-front
              (display " " outp))
            (let ([last-stx-printed
-                  (main-case-analysis (first e-rest)
+                  (main-case-analysis (first stx-pair)
                                       (syntax-line previous-stx))])
-             (loop (rest e-rest) last-stx-printed #t))]
+             (loop (rest stx-pair) last-stx-printed #t))]
           
           [else
            (display " . " outp)
-           (main-case-analysis e-rest (syntax-line previous-stx))])))
+           (main-case-analysis stx-pair (syntax-line previous-stx))])))
     
     (main-case-analysis stx (syntax-line stx)))
   

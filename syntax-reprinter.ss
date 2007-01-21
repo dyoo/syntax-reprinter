@@ -10,22 +10,17 @@
     ;; Does the main case analysis on the datum.
     ;; Returns the last syntax object printed.
     (define (main-case-analysis stx last-line)
-      (printf "main-case-analysis: ~a~n" stx)
+      
       (when (not (= last-line (syntax-line stx)))
         (newline outp))
       
       (syntax-case stx ()
         
-        [(e-first . e-rest)
+        [(_0 . _1)
          (begin
            (display (open stx) outp)
            (let ([last-printed-stx
-                  (reprint-sequence-internals stx
-                                              (syntax e-first)
-                                              (if (or (pair? (syntax-e (syntax e-rest)))
-                                                      (empty? (syntax-e (syntax e-rest))))
-                                                  (syntax-e (syntax e-rest))
-                                                  (syntax e-rest)))])
+                  (reprint-sequence-internals stx (syntax-e stx))])
              (display (close stx) outp)
              last-printed-stx))]
         
@@ -48,20 +43,20 @@
     
     ;; reprint-sequence-internals: syntax syntax-pair/empty/syntax-object syntax -> syntax
     ;; Handles the printing of the internal elements.
-    (define (reprint-sequence-internals container-stx e-first e-rest)
-      (let loop ([e-rest e-rest]
-                 [previous-stx
-                  (main-case-analysis e-first (syntax-line container-stx))])
+    (define (reprint-sequence-internals container-stx stx-pair)
+      (let loop ([e-rest stx-pair]
+                 [previous-stx container-stx]
+                 [space-in-front #f])
         (cond
           [(empty? e-rest) previous-stx]
           
           [(pair? e-rest)
-           (display " " outp)
+           (when space-in-front
+             (display " " outp))
            (let ([last-stx-printed
                   (main-case-analysis (first e-rest)
                                       (syntax-line previous-stx))])
-             (loop (rest e-rest)
-                   last-stx-printed))]
+             (loop (rest e-rest) last-stx-printed #t))]
           
           [else
            (display " . " outp)

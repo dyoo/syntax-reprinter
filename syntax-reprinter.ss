@@ -46,6 +46,9 @@
     ;; Returns the last syntax object printed.
     (define (main-case-analysis stx last-pos)
       (syntax-case stx ()
+        [(abbreviated-quoted-form datum)
+         (abbreviated-quoted? (syntax abbreviated-quoted-form))
+         (handle-abbreviated-quoted stx last-pos)]
         [(_0 . _1)
          (handle-pair/empty stx last-pos)]
         [()
@@ -54,6 +57,50 @@
          (handle-vector stx last-pos)]
         [else
          (handle-datum stx last-pos)]))
+    
+    
+    (define (abbreviated-quoted? stx)
+      (and (ormap (lambda (x) (module-identifier=? stx x))
+                  (list #'quote #'quasiquote #'unquote #'unquote-splicing
+                        #'syntax #'quasisyntax #'unsyntax #'unsyntax-splicing))
+           (or (= (syntax-span stx) 1)
+               (= (syntax-span stx) 2))))
+    
+    
+    ;; TODO: use boundmap.ss
+    (define (handle-abbreviated-quoted stx last-pos)
+      (syntax-case stx (quote quasiquote unquote unquote-splicing
+                              syntax quasisyntax unsyntax unsyntax-splicing)
+        [(quote datum)
+         (display "'" outp)
+         (reprint (syntax datum) (pos-forward-column last-pos))]
+        [(quasiquote datum)
+         (display "'" outp)
+         (reprint (syntax datum) (pos-forward-column last-pos))]
+        [(unquote datum)
+         (display "," outp)
+         (reprint (syntax datum) (pos-forward-column last-pos))]
+        [(unquote-splicing datum)
+         (display ",@" outp)
+         (reprint (syntax datum) (pos-forward-column
+                                  (pos-forward-column last-pos)))]
+        [(syntax datum)
+         (display "#'" outp)
+         (reprint (syntax datum) (pos-forward-column
+                                  (pos-forward-column last-pos)))]
+        [(quasisyntax datum)
+         (display "#`" outp)
+         (reprint (syntax datum) (pos-forward-column
+                                  (pos-forward-column last-pos)))]
+        [(unsyntax datum)
+         (display "#," outp)
+         (reprint (syntax datum) (pos-forward-column
+                                  (pos-forward-column last-pos)))]
+        [(unsyntax-splicing datum)
+         (display "#,@" outp)
+         (reprint (syntax datum) (pos-forward-column
+                                  (pos-forward-column
+                                   (pos-forward-column last-pos))))]))
     
     
     ;; handle-pair/empty: syntax pos -> pos

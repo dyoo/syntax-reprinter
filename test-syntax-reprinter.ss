@@ -23,6 +23,10 @@
                   (reprint (syntax []))
                   "[]")
      
+     (test-equal? "quote using quote"
+                  (reprint (syntax (quote hello)))
+                  "(quote hello)")
+     
      (test-equal? "list containing lists"
                   (reprint (syntax (hello (world) testing)))
                   "(hello (world) testing)")

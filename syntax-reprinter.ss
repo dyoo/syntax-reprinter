@@ -20,7 +20,12 @@
          (begin
            (display (open stx) outp)
            (let ([last-printed-stx
-                  (reprint-sequence-internals stx (syntax e-first) (syntax e-rest))])
+                  (reprint-sequence-internals stx
+                                              (syntax e-first)
+                                              (if (or (pair? (syntax-e (syntax e-rest)))
+                                                      (empty? (syntax-e (syntax e-rest))))
+                                                  (syntax-e (syntax e-rest))
+                                                  (syntax e-rest)))])
              (display (close stx) outp)
              last-printed-stx))]
         
@@ -41,29 +46,22 @@
          (print (syntax-object->datum stx) outp)
          stx]))
     
-    ;; reprint-sequence-internals: syntax syntax syntax -> syntax
+    ;; reprint-sequence-internals: syntax syntax-pair/empty/syntax-object syntax -> syntax
     ;; Handles the printing of the internal elements.
     (define (reprint-sequence-internals container-stx e-first e-rest)
       (let loop ([e-rest e-rest]
                  [previous-stx
                   (main-case-analysis e-first (syntax-line container-stx))])
         (cond
-          [(empty? (syntax-e e-rest))
-           previous-stx]
-
-          ;; NOTE: if e-rest is a syntax-pair, then the case analysis is slightly
-          ;; subtle.
-          [(pair? (syntax-e e-rest))
+          [(empty? e-rest) previous-stx]
+          
+          [(pair? e-rest)
            (display " " outp)
            (let ([last-stx-printed
-                  (main-case-analysis (first (syntax-e e-rest))
+                  (main-case-analysis (first e-rest)
                                       (syntax-line previous-stx))])
-             (cond
-               [(empty? (rest (syntax-e e-rest)))
-                last-stx-printed]
-               [else
-                (loop (rest (syntax-e e-rest))
-                      last-stx-printed)]))]
+             (loop (rest e-rest)
+                   last-stx-printed))]
           
           [else
            (display " . " outp)

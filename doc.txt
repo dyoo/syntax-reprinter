@@ -5,7 +5,8 @@ Quick Example
 -------------
 
 Let's say that we had a syntax with complete location information, and would like
-to reprint it, preserving columns and lines.
+to reprint it, preserving columns and lines.  That's the job of _syntax-reprinter_.
+
 
     > (require (planet "syntax-reprinter.ss ("dyoo" "syntax-reprinter.plt")))
     > (define outp (open-output-string))
@@ -28,6 +29,10 @@ to reprint it, preserving columns and lines.
     >
 
 
+That's pretty much it.  Only one function is provided here, _syntax-reprint_.
+
+
+
 Functions
 ---------
 
@@ -35,6 +40,17 @@ Functions
 
 Prints out the syntax to the output-port, adding newlines and spaces according to the
 syntax-line and syntax-column properties of the syntax.
+
+If the output-port isn't given, uses (current-output-port) by default.
+
+
+
+Known Bugs
+----------
+
+Handling syntaxes where there are newlines right before a closing paren isn't handled;
+I don't think enough information is preserved in syntax objects to reconstruct the
+textual representation.  (If I'm wrong, please correct me so I can fix it!  *grin*)
 
 
 

@@ -6,11 +6,14 @@
   
   ;; We need to maintain our current position.
   (define-struct pos (line column))
-  
+
+  ;; pos-newline: pos -> pos
+  ;; moves a-pos down one row.
   (define (pos-newline a-pos)
     (make-pos (add1 (pos-line a-pos)) 0))
   
-  
+  ;; pos-forward-column: pos [number=1] -> pos
+  ;; pushes a-pos forward by n columns.
   (define pos-forward-column
     (case-lambda
       [(a-pos)
@@ -19,6 +22,7 @@
        (make-pos (pos-line a-pos) (+ n (pos-column a-pos)))]))
   
   
+  ;; pos-stx-printed: pos syntax -> pos
   (define (pos-stx-printed a-pos stx)
     ;; TODO: handle strings with internal newlines
     (make-pos (pos-line a-pos)
@@ -82,9 +86,9 @@
     ;; Returns the last syntax object printed.
     (define (main-case-analysis stx last-pos)
       (syntax-case stx ()
-        [(abbreviated-quoted-form datum)
-         (abbreviated-quote? (syntax abbreviated-quoted-form))
-         (handle-abbreviated-quoted stx last-pos)]
+        [(abbreviated-quote datum)
+         (abbreviated-quote? (syntax abbreviated-quote))
+         (handle-abbreviated-quote stx last-pos)]
         [(_0 . _1)
          (handle-pair/empty stx last-pos)]
         [()
@@ -95,8 +99,8 @@
          (handle-datum stx last-pos)]))
     
     
-    
-    (define (handle-abbreviated-quoted stx last-pos)
+    ;; handle-abbreviated-quote: syntax pos -> pos
+    (define (handle-abbreviated-quote stx last-pos)
       (syntax-case stx ()
         [(abbrv-quote datum)
          (abbreviated-quote? (syntax abbrv-quote))
@@ -118,13 +122,13 @@
         (pos-forward-column new-last-pos)))
     
     
+    ;; handle-vector: syntax pos -> pos
     (define (handle-vector stx last-pos)
       (display "#(" outp)
       (let* ([vec (syntax-e stx)]
             [len (vector-length vec)])
         (let loop ([i 0]
-                   [last-pos (pos-forward-column
-                              (pos-forward-column last-pos))])
+                   [last-pos (pos-forward-column last-pos 2)])
           (cond [(< i len)
                  (loop (add1 i)
                        (reprint (vector-ref vec i) last-pos))]
@@ -155,10 +159,7 @@
           
           [else
            (display " . " outp)
-           (reprint stx-pair
-                    (pos-forward-column
-                     (pos-forward-column
-                      (pos-forward-column last-pos))))])))
+           (reprint stx-pair (pos-forward-column last-pos 3))])))
     
     
     

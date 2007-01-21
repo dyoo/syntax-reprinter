@@ -1,5 +1,6 @@
 (module syntax-reprinter mzscheme
-  (require (lib "list.ss"))
+  (require (lib "list.ss")
+           (lib "boundmap.ss" "syntax"))
   (provide syntax-reprint)
   
   
@@ -9,13 +10,48 @@
   (define (pos-newline a-pos)
     (make-pos (add1 (pos-line a-pos)) 0))
   
-  (define (pos-forward-column a-pos)
-    (make-pos (pos-line a-pos) (add1 (pos-column a-pos))))
+  
+  (define pos-forward-column
+    (case-lambda
+      [(a-pos)
+       (pos-forward-column a-pos 1)]
+      [(a-pos n)
+       (make-pos (pos-line a-pos) (+ n (pos-column a-pos)))]))
+  
   
   (define (pos-stx-printed a-pos stx)
     ;; TODO: handle strings with internal newlines
     (make-pos (pos-line a-pos)
               (+ (syntax-span stx) (pos-column a-pos))))
+  
+  
+  ;; In order to handle the syntactic abbreviations in a nice way,
+  ;; we keep a mapping them here:
+  (define abbreviations (make-module-identifier-mapping)) 
+  (for-each (lambda (abbv+string)
+              (module-identifier-mapping-put! abbreviations
+                                              (first abbv+string)
+                                              (second abbv+string)))
+            (list (list #'quote "'")
+                  (list #'quasiquote "`")
+                  (list #'unquote ",")
+                  (list #'unquote-splicing ",@")
+                  (list #'syntax "#'")
+                  (list #'quasisyntax "#`")
+                  (list #'unsyntax "#,")
+                  (list #'unsyntax-splicing "#,@")))
+  
+  ;; abbreviated-quote?: syntax -> boolean
+  (define (abbreviated-quote? stx)
+    (let/ec return
+      (let ([s (module-identifier-mapping-get abbreviations stx
+                                              (lambda () (return #f)))])
+        (= (syntax-span stx) (string-length s)))))
+  
+  
+  ;; abbreviated-quote-stx->string: syntax -> string
+  (define (abbreviated-quote-stx->string stx)
+    (module-identifier-mapping-get abbreviations stx))
   
   
   ;; syntax-reprint: stx output-port -> void
@@ -26,7 +62,7 @@
     (define (entry-point)
       (reprint stx (make-pos (syntax-line stx) (syntax-column stx))))
     
-
+    
     ;; reprint: syntax pos -> pos
     ;; prints out datum, returns last position.
     (define (reprint stx last-pos)
@@ -47,7 +83,7 @@
     (define (main-case-analysis stx last-pos)
       (syntax-case stx ()
         [(abbreviated-quoted-form datum)
-         (abbreviated-quoted? (syntax abbreviated-quoted-form))
+         (abbreviated-quote? (syntax abbreviated-quoted-form))
          (handle-abbreviated-quoted stx last-pos)]
         [(_0 . _1)
          (handle-pair/empty stx last-pos)]
@@ -59,48 +95,15 @@
          (handle-datum stx last-pos)]))
     
     
-    (define (abbreviated-quoted? stx)
-      (and (ormap (lambda (x) (module-identifier=? stx x))
-                  (list #'quote #'quasiquote #'unquote #'unquote-splicing
-                        #'syntax #'quasisyntax #'unsyntax #'unsyntax-splicing))
-           (or (= (syntax-span stx) 1)
-               (= (syntax-span stx) 2))))
     
-    
-    ;; TODO: use boundmap.ss
     (define (handle-abbreviated-quoted stx last-pos)
-      (syntax-case stx (quote quasiquote unquote unquote-splicing
-                              syntax quasisyntax unsyntax unsyntax-splicing)
-        [(quote datum)
-         (display "'" outp)
-         (reprint (syntax datum) (pos-forward-column last-pos))]
-        [(quasiquote datum)
-         (display "'" outp)
-         (reprint (syntax datum) (pos-forward-column last-pos))]
-        [(unquote datum)
-         (display "," outp)
-         (reprint (syntax datum) (pos-forward-column last-pos))]
-        [(unquote-splicing datum)
-         (display ",@" outp)
-         (reprint (syntax datum) (pos-forward-column
-                                  (pos-forward-column last-pos)))]
-        [(syntax datum)
-         (display "#'" outp)
-         (reprint (syntax datum) (pos-forward-column
-                                  (pos-forward-column last-pos)))]
-        [(quasisyntax datum)
-         (display "#`" outp)
-         (reprint (syntax datum) (pos-forward-column
-                                  (pos-forward-column last-pos)))]
-        [(unsyntax datum)
-         (display "#," outp)
-         (reprint (syntax datum) (pos-forward-column
-                                  (pos-forward-column last-pos)))]
-        [(unsyntax-splicing datum)
-         (display "#,@" outp)
-         (reprint (syntax datum) (pos-forward-column
-                                  (pos-forward-column
-                                   (pos-forward-column last-pos))))]))
+      (syntax-case stx ()
+        [(abbrv-quote datum)
+         (abbreviated-quote? (syntax abbrv-quote))
+         (let ([quote-string (abbreviated-quote-stx->string (syntax abbrv-quote))])
+           (display quote-string outp)
+           (reprint (syntax datum)
+                    (pos-forward-column last-pos (string-length quote-string))))]))
     
     
     ;; handle-pair/empty: syntax pos -> pos

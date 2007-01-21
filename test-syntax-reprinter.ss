@@ -27,6 +27,10 @@
                   (reprint (syntax (quote hello)))
                   "(quote hello)")
      
+     (test-equal? "quote in quote in quote"
+                  (reprint (syntax '(quote '(quote hello))))
+                  "'(quote '(quote hello))")
+     
      (test-equal? "list containing lists"
                   (reprint (syntax (hello (world) testing)))
                   "(hello (world) testing)")

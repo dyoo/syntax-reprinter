@@ -50,8 +50,6 @@
          (handle-pair/empty stx last-pos)]
         [()
          (handle-pair/empty stx last-pos)]
-        
-        ;; TODO: handle vectors
         [#(_ ...)
          (handle-vector stx last-pos)]
         [else

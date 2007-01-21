@@ -21,6 +21,12 @@
   ;; syntax-reprint: stx output-port -> void
   (define (syntax-reprint stx outp)
     
+    ;; entry-point: -> pos
+    ;; Starts off the syntax-reprint.
+    (define (entry-point)
+      (reprint stx (make-pos (syntax-line stx) (syntax-column stx))))
+    
+
     ;; reprint: syntax pos -> pos
     ;; prints out datum, returns last position.
     (define (reprint stx last-pos)
@@ -41,36 +47,33 @@
     (define (main-case-analysis stx last-pos)
       (syntax-case stx ()
         [(_0 . _1)
-         (handle-pair stx last-pos)]
+         (handle-pair/empty stx last-pos)]
         [()
-         (handle-empty-list stx last-pos)]
+         (handle-pair/empty stx last-pos)]
         
         ;; TODO: handle vectors
         [else
          (handle-datum stx last-pos)]))
     
     
-    (define (handle-pair stx last-pos)
+    ;; handle-pair/empty: syntax pos -> pos
+    (define (handle-pair/empty stx last-pos)
       (display (open stx) outp)
       (let ([new-last-pos
              (reprint-sequence-internals (syntax-e stx) (pos-forward-column last-pos))])
         (display (close stx) outp)
+        
+        ;; unfortunately, syntax objects do not capture enough
+        ;; for us to know if there's some newline between the
+        ;; open and close parens.  We just assume that we've just gone forward.
         (pos-forward-column new-last-pos)))
     
     
-    (define (handle-empty-list stx last-pos)
-      (display (open stx) outp)
-      ;; unfortunately, syntax objects do not capture enough
-      ;; for us to know if there's some newline between the
-      ;; open and close parens.
-      (display (close stx) outp)
-      (pos-forward-column
-       (pos-forward-column last-pos)))
-    
-    
+    ;; handle-datum: syntax pos -> pos
     (define (handle-datum stx last-pos)
       (print (syntax-object->datum stx) outp)
       (pos-stx-printed last-pos stx))
+    
     
     ;; reprint-sequence-internals: syntax (union syntax-pair empty syntax-object) -> syntax
     ;; Handles the printing of the internal elements.
@@ -89,21 +92,27 @@
           [else
            (display " . " outp)
            (reprint stx-pair
-                                 (pos-forward-column
-                                  (pos-forward-column
-                                   (pos-forward-column last-pos))))])))
+                    (pos-forward-column
+                     (pos-forward-column
+                      (pos-forward-column last-pos))))])))
     
-    (reprint stx (make-pos (syntax-line stx) (syntax-column stx))))
-  
-  
-  (define (open stx)
-    (case (syntax-property stx 'paren-shape)
-      [(#\[) "["]
-      [(#\{) "{"]
-      [else "("]))
-  
-  (define (close stx)
-    (case (syntax-property stx 'paren-shape)
-      [(#\[) "]"]
-      [(#\{) "}"]
-      [else ")"])))
+    
+    
+    ;; open: syntax -> character
+    ;; Depending on the shape of the stx, returns the appropriate opening paren.
+    (define (open stx)
+      (case (syntax-property stx 'paren-shape)
+        [(#\[) "["]
+        [(#\{) "{"]
+        [else "("]))
+    
+    
+    ;; close: syntax -> character
+    ;; Depending on the shape of the stx, returns the appropriate closing paren.
+    (define (close stx)
+      (case (syntax-property stx 'paren-shape)
+        [(#\[) "]"]
+        [(#\{) "}"]
+        [else ")"]))
+    
+    (entry-point)))

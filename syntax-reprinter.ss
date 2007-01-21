@@ -6,14 +6,18 @@
   ;; syntax-reprint: stx output-port -> void
   (define (syntax-reprint stx outp)
     
-    ;; main-case-analysis: syntax number -> syntax
+    (define (reprint-syntax-datum stx last-line)
+      (cond
+        [(not (= last-line (syntax-line stx)))
+         (newline outp)
+         (reprint-syntax-datum stx (add1 last-line))]
+        [else
+         (main-case-analysis stx last-line)]))
+    
+    ;; main-case-analysis: syntax number number -> syntax
     ;; Does the main case analysis on the datum.
     ;; Returns the last syntax object printed.
     (define (main-case-analysis stx last-line)
-      
-      (when (not (= last-line (syntax-line stx)))
-        (newline outp))
-      
       (syntax-case stx ()
         
         [(_0 . _1)
@@ -54,15 +58,15 @@
            (when space-in-front
              (display " " outp))
            (let ([last-stx-printed
-                  (main-case-analysis (first stx-pair)
-                                      (syntax-line previous-stx))])
+                  (reprint-syntax-datum (first stx-pair)
+                                        (syntax-line previous-stx))])
              (loop (rest stx-pair) last-stx-printed #t))]
           
           [else
            (display " . " outp)
-           (main-case-analysis stx-pair (syntax-line previous-stx))])))
+           (reprint-syntax-datum stx-pair (syntax-line previous-stx))])))
     
-    (main-case-analysis stx (syntax-line stx)))
+    (reprint-syntax-datum stx (syntax-line stx)))
   
   
   (define (open stx)

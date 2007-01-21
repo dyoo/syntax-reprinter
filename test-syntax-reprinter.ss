@@ -31,6 +31,14 @@
      (test-equal? "syntax spanning lines"
                   (reprint (syntax (hiya
                                     world)))
-                  "(hiya \nworld)")))
+                  "(hiya \nworld)")
+     
+     
+     (test-equal? "syntax spanning multiple lines"
+                  (reprint (syntax (hiya
+                                    
+                                    
+                                    world)))
+                  "(hiya \n\n\nworld)")))
   
   (test/text-ui reprinter-tests))

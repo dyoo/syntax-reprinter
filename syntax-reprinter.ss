@@ -13,6 +13,7 @@
     (make-pos (pos-line a-pos) (add1 (pos-column a-pos))))
   
   (define (pos-stx-printed a-pos stx)
+    ;; TODO: handle strings with internal newlines
     (make-pos (pos-line a-pos)
               (+ (syntax-span stx) (pos-column a-pos))))
   
@@ -20,18 +21,19 @@
   ;; syntax-reprint: stx output-port -> void
   (define (syntax-reprint stx outp)
     
-    ;; reprint-syntax-datum: syntax pos -> pos
+    ;; reprint: syntax pos -> pos
     ;; prints out datum, returns last position.
-    (define (reprint-syntax-datum stx last-pos)
+    (define (reprint stx last-pos)
       (cond
         [(< (pos-line last-pos) (syntax-line stx))
          (newline outp)
-         (reprint-syntax-datum stx (pos-newline last-pos))]
+         (reprint stx (pos-newline last-pos))]
         [(< (pos-column last-pos) (syntax-column stx))
          (display " " outp)
-         (reprint-syntax-datum stx (pos-forward-column last-pos))]
+         (reprint stx (pos-forward-column last-pos))]
         [else
          (main-case-analysis stx last-pos)]))
+    
     
     ;; main-case-analysis: syntax number number -> number
     ;; Does the main case analysis on the datum.
@@ -39,31 +41,36 @@
     (define (main-case-analysis stx last-pos)
       (syntax-case stx ()
         [(_0 . _1)
-         (begin
-           (display (open stx) outp)
-           (let ([new-last-pos
-                  (reprint-sequence-internals (syntax-e stx)
-                                              (pos-forward-column last-pos))])
-             (display (close stx) outp)
-             (pos-forward-column new-last-pos)))]
-        
+         (handle-pair stx last-pos)]
         [()
-         (begin
-           (display (open stx) outp)
-           ;; unfortunately, syntax objects do not capture enough
-           ;; for us to know if there's some newline between the
-           ;; open and close parens.
-           (display (close stx) outp)
-           (pos-forward-column
-            (pos-forward-column last-pos)))]
+         (handle-empty-list stx last-pos)]
         
         ;; TODO: handle vectors
-        
         [else
-         ;; symbols or other datums
-         ;; TODO: handle strings with internal newlines
-         (print (syntax-object->datum stx) outp)
-         (pos-stx-printed last-pos stx)]))
+         (handle-datum stx last-pos)]))
+    
+    
+    (define (handle-pair stx last-pos)
+      (display (open stx) outp)
+      (let ([new-last-pos
+             (reprint-sequence-internals (syntax-e stx) (pos-forward-column last-pos))])
+        (display (close stx) outp)
+        (pos-forward-column new-last-pos)))
+    
+    
+    (define (handle-empty-list stx last-pos)
+      (display (open stx) outp)
+      ;; unfortunately, syntax objects do not capture enough
+      ;; for us to know if there's some newline between the
+      ;; open and close parens.
+      (display (close stx) outp)
+      (pos-forward-column
+       (pos-forward-column last-pos)))
+    
+    
+    (define (handle-datum stx last-pos)
+      (print (syntax-object->datum stx) outp)
+      (pos-stx-printed last-pos stx))
     
     ;; reprint-sequence-internals: syntax (union syntax-pair empty syntax-object) -> syntax
     ;; Handles the printing of the internal elements.
@@ -76,17 +83,17 @@
           
           [(pair? stx-pair)
            (let ([new-last-pos
-                  (reprint-syntax-datum (first stx-pair) last-pos)])
+                  (reprint (first stx-pair) last-pos)])
              (loop (rest stx-pair) new-last-pos))]
           
           [else
            (display " . " outp)
-           (reprint-syntax-datum stx-pair
+           (reprint stx-pair
                                  (pos-forward-column
                                   (pos-forward-column
                                    (pos-forward-column last-pos))))])))
     
-    (reprint-syntax-datum stx (make-pos (syntax-line stx) (syntax-column stx))))
+    (reprint stx (make-pos (syntax-line stx) (syntax-column stx))))
   
   
   (define (open stx)

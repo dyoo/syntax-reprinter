@@ -27,6 +27,17 @@
                   (reprint (syntax (hello (world) testing)))
                   "(hello (world) testing)")
      
+     (test-equal? "vector"
+                  (reprint (syntax #(1 2
+                                       3
+                                       4)))
+                  "#(1 2\n                                       3\n                                       4)")
+     
+     (test-equal? "quoted list"
+                  (reprint (syntax '(hello)))
+                  "'(hello)")
+     
+     
      ;; TODO: fix the test to get the columns right.
      (test-equal? "syntax spanning lines"
                   (reprint (syntax (hiya

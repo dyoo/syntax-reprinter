@@ -52,6 +52,8 @@
          (handle-pair/empty stx last-pos)]
         
         ;; TODO: handle vectors
+        [#(_ ...)
+         (handle-vector stx last-pos)]
         [else
          (handle-datum stx last-pos)]))
     
@@ -62,11 +64,25 @@
       (let ([new-last-pos
              (reprint-sequence-internals (syntax-e stx) (pos-forward-column last-pos))])
         (display (close stx) outp)
-        
         ;; unfortunately, syntax objects do not capture enough
         ;; for us to know if there's some newline between the
         ;; open and close parens.  We just assume that we've just gone forward.
         (pos-forward-column new-last-pos)))
+    
+    
+    (define (handle-vector stx last-pos)
+      (display "#(" outp)
+      (let* ([vec (syntax-e stx)]
+            [len (vector-length vec)])
+        (let loop ([i 0]
+                   [last-pos (pos-forward-column
+                              (pos-forward-column last-pos))])
+          (cond [(< i len)
+                 (loop (add1 i)
+                       (reprint (vector-ref vec i) last-pos))]
+                [else
+                 (display ")" outp)
+                 (pos-forward-column last-pos)]))))
     
     
     ;; handle-datum: syntax pos -> pos

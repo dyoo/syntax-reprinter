@@ -13,44 +13,44 @@
      "Reprinter tests"
      (test-equal? "simple test"
                   (reprint (syntax (hello world)))
-                  "(hello world)")
+                  "                                   (hello world)")
      
      (test-equal? "dotted pair"
                   (reprint (syntax (hello . nurse)))
-                  "(hello . nurse)")
+                  "                                   (hello . nurse)")
      
      (test-equal? "boxy empty"
                   (reprint (syntax []))
-                  "[]")
+                  "                                   []")
      
      (test-equal? "quote using quote"
                   (reprint (syntax (quote hello)))
-                  "(quote hello)")
+                  
+                  "                                   (quote hello)")
      
      (test-equal? "quote in quote in quote"
                   (reprint (syntax '(quote '(quote hello))))
-                  "'(quote '(quote hello))")
+                  "                                   '(quote '(quote hello))")
      
      (test-equal? "list containing lists"
                   (reprint (syntax (hello (world) testing)))
-                  "(hello (world) testing)")
+                  "                                   (hello (world) testing)")
      
      (test-equal? "vector"
                   (reprint (syntax #(1 2
                                        3
                                        4)))
-                  "#(1 2\n                                       3\n                                       4)")
+                  "                                   #(1 2\n                                       3\n                                       4)")
      
      (test-equal? "quoted list"
                   (reprint (syntax '(hello)))
-                  "'(hello)")
+                  "                                   '(hello)")
      
      
-     ;; TODO: fix the test to get the columns right.
      (test-equal? "syntax spanning lines"
                   (reprint (syntax (hiya
                                     world)))
-                  "(hiya\n                                    world)")
+                  "                                   (hiya\n                                    world)")
      
      
      (test-equal? "syntax spanning multiple lines"
@@ -58,6 +58,6 @@
                                     
                                     
                                     world)))
-                  "(hiya\n\n\n                                    world)")))
+                  "                                   (hiya\n\n\n                                    world)")))
   
   (test/text-ui reprinter-tests))

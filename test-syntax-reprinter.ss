@@ -8,6 +8,11 @@
     (syntax-reprint stx outp)
     (get-output-string outp))
   
+  (define (reprint-many stx)
+    (define outp (open-output-string))
+    (syntax-reprint-many stx outp)
+    (get-output-string outp))
+  
   (define reprinter-tests
     (test-suite
      "Reprinter tests"
@@ -58,6 +63,14 @@
                                     
                                     
                                     world)))
-                  "                                   (hiya\n\n\n                                    world)")))
+                  "                                   (hiya\n\n\n                                    world)")
+     
+     
+     (let ()
+       (define str "(1 2 3    4)      (1 2 3 4)")
+       (define port (begin (port-count-lines-enabled #t) (open-input-string str)))
+       (test-equal? "syntax-reprint-many"
+                    (reprint-many (list (read-syntax 'str port) (read-syntax 'str port)))
+                    str))))
   
   (test/text-ui reprinter-tests))
